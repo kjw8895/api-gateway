@@ -1,7 +1,7 @@
 package com.api.gateway.api.master.filter;
 
 import com.api.gateway.api.master.config.property.JwtProperties;
-import io.jsonwebtoken.Jwts;
+import com.api.gateway.api.master.service.JwtService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -20,11 +20,11 @@ import java.util.Objects;
 @Slf4j
 @EnableConfigurationProperties(JwtProperties.class)
 public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> {
-    private final JwtProperties jwtProperties;
+    private final JwtService jwtService;
 
-    public AuthFilter(JwtProperties jwtProperties) {
+    public AuthFilter(JwtService jwtService) {
         super(Config.class);
-        this.jwtProperties = jwtProperties;
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -39,31 +39,12 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
             String authorizationHeader = Objects.requireNonNull(request.getHeaders().get(HttpHeaders.AUTHORIZATION)).get(0);
             String jwt = authorizationHeader.replace("Bearer", "");
 
-            if (!isJwtValid(jwt)) {
+            if (!jwtService.verify(jwt)) {
                 return onError(exchange, "JWT Token is not valid", HttpStatus.UNAUTHORIZED);
             }
 
             return chain.filter(exchange);
-
         });
-    }
-
-    private boolean isJwtValid(String jwt) {
-        boolean returnValue = true;
-
-        String subject = null;
-        try {
-            subject = Jwts.parser().setSigningKey(jwtProperties.getSecret())
-                    .parseClaimsJws(jwt).getBody()
-                    .getSubject();
-        } catch (Exception e) {
-            returnValue = false;
-        }
-
-        if (subject == null || subject.equals("")) {
-            returnValue = false;
-        }
-        return returnValue;
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String err, HttpStatus httpStatus) {
@@ -75,6 +56,5 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
     }
 
     public static class Config {
-
     }
 }
