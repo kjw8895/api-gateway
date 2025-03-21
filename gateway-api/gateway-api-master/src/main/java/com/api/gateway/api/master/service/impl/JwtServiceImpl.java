@@ -28,4 +28,12 @@ public class JwtServiceImpl implements JwtService {
             return false;
         }
     }
+
+    @Override
+    public Claims parse(String token) {
+        return Jwts.parser()
+                .setSigningKey(jwtProperties.getSecret())
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }

@@ -11,8 +11,8 @@ spring:
     name: api-gateway-service
   cloud:
     gateway:
-      default-filters:
-        - name : GlobalFilter
+#      default-filters:
+#        - name : CustomGlobalFilter
       routes:
         #        ...
         - id: user-service
@@ -20,8 +20,7 @@ spring:
           predicates:
             - Path=/user/**
           filters:
-#            - RewritePath=/user/(?<path>.*),/$\{path}
-            - AuthFilter
+            - RewritePath=/user/(?<path>.*),/$\{path}
 
 
 jwt:
