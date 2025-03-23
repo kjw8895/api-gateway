@@ -32,6 +32,10 @@ auth:
   whitelist:
     - path: /auth/sign-in
       method: POST
+    - path: /auth/sms/send
+      method: POST
+    - path: /auth/sms/verify
+      method: POST
     - path: /user/sign-up
       method: POST
     - path: /public/**
