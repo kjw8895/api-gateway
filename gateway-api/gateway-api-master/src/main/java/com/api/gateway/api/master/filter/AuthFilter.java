@@ -14,11 +14,14 @@ import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.server.PathContainer;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.util.pattern.PathPattern;
+import org.springframework.web.util.pattern.PathPatternParser;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
@@ -35,13 +38,16 @@ public class AuthFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getPath().value();
+        PathPattern pattern = new PathPatternParser().parse("/public/**");
+        boolean allowedDomainPattern = pattern.matches(PathContainer.parsePath(path));
+
         String originalPath = RequestPathUtils.getOriginalRequestPath(exchange);
         HttpMethod method = exchange.getRequest().getMethod();
-
-        boolean isAllowed = authProperties.getWhitelist().stream()
+        boolean allowedOriginPattern = authProperties.getWhitelist().stream()
                 .anyMatch(rule -> rule.getMethod().equals(method) && new AntPathMatcher().match(rule.getPath(), originalPath));
 
-        if (isAllowed) {
+        if (allowedDomainPattern || allowedOriginPattern) {
             return chain.filter(exchange);
         }
 
