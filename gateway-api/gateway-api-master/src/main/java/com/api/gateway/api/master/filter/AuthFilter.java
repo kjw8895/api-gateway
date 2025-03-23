@@ -1,8 +1,9 @@
 package com.api.gateway.api.master.filter;
 
-import com.api.gateway.api.master.config.property.JwtProperties;
+import com.api.gateway.api.master.config.property.AuthProperties;
 import com.api.gateway.api.master.service.JwtService;
 import com.api.gateway.common.constant.HttpHeaderConstant;
+import com.api.gateway.common.utils.RequestPathUtils;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,10 +12,12 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -23,14 +26,25 @@ import java.util.Objects;
 
 @Component
 @Slf4j
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({AuthProperties.class})
 @RequiredArgsConstructor
 public class AuthFilter implements GlobalFilter, Ordered {
     private final JwtService jwtService;
+    private final AuthProperties authProperties;
 
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String originalPath = RequestPathUtils.getOriginalRequestPath(exchange);
+        HttpMethod method = exchange.getRequest().getMethod();
+
+        boolean isAllowed = authProperties.getWhitelist().stream()
+                .anyMatch(rule -> rule.getMethod().equals(method) && new AntPathMatcher().match(rule.getPath(), originalPath));
+
+        if (isAllowed) {
+            return chain.filter(exchange);
+        }
+
         ServerHttpRequest request = exchange.getRequest();
 
         if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
